@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: match-energy-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - match-energy-net
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: match-energy-server
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/match-energy
+      - JWT_SECRET=match-energy-super-secret
+      - PORT=3000
+    depends_on:
+      - mongo
+    networks:
+      - match-energy-net
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: match-energy-client
+    ports:
+      - "3001:3001"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3000
+    depends_on:
+      - server
+    networks:
+      - match-energy-net
+
+volumes:
+  mongo_data:
+
+networks:
+  match-energy-net:
+    driver: bridge
