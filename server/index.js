@@ -9,6 +9,15 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
+app.get('/api/health', async (req, res) => {
+  try {
+    await mongoose.connection.db.admin().ping();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false });
+  }
+});
+
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/appliances', require('./routes/appliances'));
 app.use('/api/rates', require('./routes/rates'));
