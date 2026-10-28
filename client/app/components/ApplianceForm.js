@@ -65,6 +65,7 @@ export default function ApplianceForm({ onSave, onClose, editing }) {
     name: '', type: 'kitchen', wattage: '', hoursPerDay: ''
   });
   const [selectedPreset, setSelectedPreset] = useState('');
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (editing) {
@@ -77,19 +78,43 @@ export default function ApplianceForm({ onSave, onClose, editing }) {
     }
   }, [editing]);
 
-  const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handle = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+    if (errors[e.target.name]) setErrors(prev => ({ ...prev, [e.target.name]: '' }));
+  };
 
   const applyPreset = (preset) => {
     setSelectedPreset(preset.name);
     setForm(f => ({ ...f, name: preset.name, wattage: preset.wattage || '' }));
+    setErrors(prev => ({ ...prev, name: '', wattage: '' }));
+  };
+
+  const validate = () => {
+    const errs = {};
+    if (!form.name.trim()) {
+      errs.name = 'Appliance name is required';
+    }
+    const w = parseFloat(form.wattage);
+    if (form.wattage === '' || isNaN(w) || w < 1 || w > 100000) {
+      errs.wattage = 'Enter a wattage between 1W and 100,000W';
+    }
+    const h = parseFloat(form.hoursPerDay);
+    if (form.hoursPerDay === '' || isNaN(h) || h < 0 || h > 24) {
+      errs.hoursPerDay = 'Enter hours between 0 and 24';
+    }
+    return errs;
   };
 
   const dailyKwh = form.wattage && form.hoursPerDay
-    ? ((form.wattage * form.hoursPerDay) / 1000).toFixed(2)
+    ? ((parseFloat(form.wattage) * parseFloat(form.hoursPerDay)) / 1000).toFixed(2)
     : null;
 
   const submit = () => {
-    if (!form.name || !form.wattage || !form.hoursPerDay) return;
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
     onSave({
       ...form,
       wattage: parseFloat(form.wattage),
@@ -154,8 +179,11 @@ export default function ApplianceForm({ onSave, onClose, editing }) {
             <input
               name="name" value={form.name} onChange={handle}
               placeholder="e.g. Bedroom AC"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-green-500 text-sm"
+              className={`w-full bg-gray-800 border rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none text-sm ${
+                errors.name ? 'border-red-500 focus:border-red-500' : 'border-gray-700 focus:border-green-500'
+              }`}
             />
+            {errors.name && <p className="text-xs text-red-400 mt-1">{errors.name}</p>}
           </div>
 
           {/* Wattage + Hours */}
@@ -163,34 +191,39 @@ export default function ApplianceForm({ onSave, onClose, editing }) {
             <div>
               <label className="block text-xs text-gray-400 mb-1">Wattage (W)</label>
               <input
-                name="wattage" type="number" value={form.wattage} onChange={handle}
+                name="wattage" type="number" min="1" max="100000" value={form.wattage} onChange={handle}
                 placeholder="e.g. 1000"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-green-500 text-sm"
+                className={`w-full bg-gray-800 border rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none text-sm ${
+                  errors.wattage ? 'border-red-500 focus:border-red-500' : 'border-gray-700 focus:border-green-500'
+                }`}
               />
+              {errors.wattage && <p className="text-xs text-red-400 mt-1">{errors.wattage}</p>}
             </div>
             <div>
               <label className="block text-xs text-gray-400 mb-1">Hours / Day</label>
               <input
-                name="hoursPerDay" type="number" step="0.5" value={form.hoursPerDay} onChange={handle}
+                name="hoursPerDay" type="number" step="0.5" min="0" max="24" value={form.hoursPerDay} onChange={handle}
                 placeholder="e.g. 8"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-green-500 text-sm"
+                className={`w-full bg-gray-800 border rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none text-sm ${
+                  errors.hoursPerDay ? 'border-red-500 focus:border-red-500' : 'border-gray-700 focus:border-green-500'
+                }`}
               />
+              {errors.hoursPerDay && <p className="text-xs text-red-400 mt-1">{errors.hoursPerDay}</p>}
             </div>
           </div>
 
           {/* Live estimate */}
-          {dailyKwh && (
+          {dailyKwh && parseFloat(dailyKwh) > 0 && (
             <div className="bg-green-950/40 border border-green-800/50 rounded-xl p-4 text-center">
               <div className="text-2xl font-bold text-green-400">{dailyKwh} kWh</div>
               <div className="text-xs text-gray-400 mt-1">estimated daily consumption</div>
-              <div className="text-sm text-gray-300 mt-1">{(dailyKwh * 30).toFixed(1)} kWh / month</div>
+              <div className="text-sm text-gray-300 mt-1">{(parseFloat(dailyKwh) * 30).toFixed(1)} kWh / month</div>
             </div>
           )}
 
           <button
             onClick={submit}
-            disabled={!form.name || !form.wattage || !form.hoursPerDay}
-            className="w-full bg-green-500 hover:bg-green-400 disabled:opacity-40 text-gray-950 font-semibold py-3 rounded-xl transition-colors text-sm"
+            className="w-full bg-green-500 hover:bg-green-400 text-gray-950 font-semibold py-3 rounded-xl transition-colors text-sm"
           >
             {editing ? 'Save Changes' : 'Add Appliance'}
           </button>

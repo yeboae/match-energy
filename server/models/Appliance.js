@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const ApplianceSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  home: { type: mongoose.Schema.Types.ObjectId, ref: 'Home', default: null },
   name: { type: String, required: true },
   type: {
     type: String,

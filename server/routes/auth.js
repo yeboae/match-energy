@@ -24,7 +24,7 @@ router.post('/register', async (req, res) => {
     });
 
     const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-    res.status(201).json({ token, user: { id: user._id, email: user.email, location: user.location, ratePerKwh: user.ratePerKwh } });
+    res.status(201).json({ token, user: { id: user._id, email: user.email, location: user.location, ratePerKwh: user.ratePerKwh, goalType: user.goalType, goalValue: user.goalValue } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -41,7 +41,7 @@ router.post('/login', async (req, res) => {
     if (!match) return res.status(400).json({ error: 'Invalid credentials' });
 
     const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user: { id: user._id, email: user.email, location: user.location, ratePerKwh: user.ratePerKwh } });
+    res.json({ token, user: { id: user._id, email: user.email, location: user.location, ratePerKwh: user.ratePerKwh, goalType: user.goalType, goalValue: user.goalValue } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -53,6 +53,47 @@ router.get('/me', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
     res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/auth/rate
+router.put('/rate', authMiddleware, async (req, res) => {
+  try {
+    const { ratePerKwh } = req.body;
+    const rate = parseFloat(ratePerKwh);
+    if (isNaN(rate) || rate <= 0 || rate > 5) {
+      return res.status(400).json({ error: 'Rate must be between $0.01 and $5.00 per kWh' });
+    }
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { ratePerKwh: rate },
+      { new: true }
+    ).select('-password');
+    res.json({ user: { id: user._id, email: user.email, location: user.location, ratePerKwh: user.ratePerKwh, goalType: user.goalType, goalValue: user.goalValue } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/auth/goal
+router.put('/goal', authMiddleware, async (req, res) => {
+  try {
+    const { goalType, goalValue } = req.body;
+    if (!['kwh', 'cost'].includes(goalType)) {
+      return res.status(400).json({ error: 'goalType must be kwh or cost' });
+    }
+    const val = parseFloat(goalValue);
+    if (isNaN(val) || val <= 0) {
+      return res.status(400).json({ error: 'goalValue must be a positive number' });
+    }
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { goalType, goalValue: val },
+      { new: true }
+    ).select('-password');
+    res.json({ user: { id: user._id, email: user.email, location: user.location, ratePerKwh: user.ratePerKwh, goalType: user.goalType, goalValue: user.goalValue } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

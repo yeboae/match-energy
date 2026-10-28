@@ -1,0 +1,22 @@
+# Environment variables — never commit these
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+api/node_modules/
+
+# Next.js build output
+client/.next/
+client/out/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
